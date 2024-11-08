@@ -1,0 +1,193 @@
+openapi: 3.1.0
+info:
+  title: Payconnect QRPH API
+  description: |-
+    
+    This document describes the API endpoints intended to be used by Payconnect Merchants to:
+      - generate QRPH compliant QR code which their customers can scan and pay
+      - receive webhook calls that the Payconnect platform will make to notify the Merchant backend when a payment is made
+      - get the status of a QRPH payment
+
+  termsOfService: https://payconnect.io/terms/
+  contact:
+    email: apiteam@payconnect.io
+  version: 1.0.0
+servers:
+  - url: https://sbx-qr-api.payconnect.io/v1
+  - url: https://qr-api.payconnect.io/v1
+  
+tags:
+  - name: qrpayment
+    description: Everything about QR Payment
+paths:
+  /qrpayment:
+    post:
+      tags:
+        - qrpayment
+      summary: Create a new QR payment
+      description: Create a new QR payment that can be paid by a customer
+      operationId: createQR
+      requestBody:
+        description: Create a new QR payment that can be paid by a customer
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQRPayment'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateQRPayment'
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+      security:
+        - payconnect_auth:
+            - write:payments
+            - read:pets
+  /qrpayment/byRequestID/{request_id}:
+    get:
+      tags:
+        - qrpayment
+      summary: Get QR payment info by requestID
+      description: Returns a single pet
+      operationId: getPetById
+      parameters:
+        - name: request_id
+          in: path
+          description: ID of qrpayment request
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateQRPayment'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Pet not found
+      security:
+        - payconnect_auth:
+            - write:pets
+            - read:pets
+webhooks:
+  /qrpayment/confirmation:
+    post:
+      requestBody:
+        description: Information about a new pet in the system
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQRPayment"
+      responses:
+        "200":
+          description: Return a 200 status to indicate that the data was received successfully
+components:
+  schemas:
+    CreateQRPayment:
+      required:
+        - name
+        - photoUrls
+      type: object
+      properties:
+        request_id:
+          type: string
+          description: globally unique request identifier, we recommend using ksuid or uuid
+          examples: [2oVq3Fu6tE5006yfNW3zUf8dOgg]
+        request_time:
+          type: string
+          format: date-time
+          examples: [2024-11-07T07:45:59+0800]
+        terminal_id:
+          type: string
+          examples: [t001]
+        merchant_id:
+          type: string
+          examples: [m001]
+        currency:
+          type: string
+          examples: [PHP]
+        total_amount:
+          type: string
+          examples: [123.45]
+        transaction_reference:
+          type: string
+          examples: [001]
+        batch_no:
+          type: string
+          examples: [b001]
+        trace_no:
+          type: string
+          examples: [t001-b001-001]
+        fee:
+          type: string
+          examples: [0.45]
+        sig:
+          type: string
+          description: |-
+          
+            request signature produced by the following psuedo code:
+            requestHash = sha512(concatenate(request_id,request_time,terminal_id,merchant_id,currency,total_amount,transaction_reference,batch_no,trace_no,fee)
+
+            sig = generateRSASignature(requestHash, rsaPrivateKey)
+          examples: [rsa-sha512-k2kD1VAw9TOA72zoDzt3ZAOdjhOg9edgBYqsvyQb5mBnwzY7nhGdEjlh364x8dd323UKuMfuwqYEyg==]
+      CreateQRPaymentResponse:
+        required:
+          - name
+          - photoUrls
+        type: object
+        properties:
+          request_id:
+            type: string
+            description: globally unique request identifier, we recommend using ksuid or uuid
+            examples: [2oVq3Fu6tE5006yfNW3zUf8dOgg]
+          request_time:
+            type: string
+            format: date-time
+            examples: [2024-11-07T07:45:59+0800]
+          terminal_id:
+            type: string
+            examples: [t001]
+          merchant_id:
+            type: string
+            examples: [m001]
+          currency:
+            type: string
+            examples: [PHP]
+          total_amount:
+            type: string
+            examples: [123.45]
+          transaction_reference:
+            type: string
+            examples: [001]
+          batch_no:
+            type: string
+            examples: [b001]
+          trace_no:
+            type: string
+            examples: [t001-b001-001]
+          fee:
+            type: string
+            examples: [0.45]
+          sig:
+            type: string
+            description: |-
+            
+              request signature produced by the following psuedo code:
+              requestHash = sha512(concatenate(request_id,request_time,terminal_id,merchant_id,currency,total_amount,transaction_reference,batch_no,trace_no,fee)
+
+              sig = generateRSASignature(requestHash, rsaPrivateKey)
+            examples: [rsa-sha512-k2kD1VAw9TOA72zoDzt3ZAOdjhOg9edgBYqsvyQb5mBnwzY7nhGdEjlh364x8dd323UKuMfuwqYEyg==]
+  securitySchemes:
+    payconnect_auth:
+      type: http
+      scheme: bearer
